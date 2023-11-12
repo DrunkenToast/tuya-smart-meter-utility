@@ -66,6 +66,8 @@ pub enum GetDevicesCommands {
 pub enum GetDeviceCommands {
     /// Retrieve stats
     Stats,
-    /// Retrieve stats
+    /// Retrieve all device info
     Info,
+    /// Query all device properties
+    Props,
 }

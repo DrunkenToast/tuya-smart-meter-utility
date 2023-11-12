@@ -1,6 +1,9 @@
 use super::TuyaClient;
 use crate::{
-    tuya::model::model::{Headers, HmacSha256, TuyaResponse, TuyaResult},
+    tuya::model::{
+        error::TuyaError,
+        model::{Headers, HmacSha256, TuyaResponse, TuyaResult},
+    },
     util::time::get_time,
 };
 use hmac::Mac;
@@ -38,14 +41,13 @@ impl TuyaClient {
     ) -> TuyaResult<T> {
         let t = get_time();
 
-        let url: Url;
-
+        let url;
         if let Some(params) = params {
             url = Url::parse_with_params(format!("{0}{endpoint}", self.host).as_str(), params)
-                .unwrap();
         } else {
-            url = Url::parse(format!("{0}{endpoint}", self.host).as_str()).unwrap();
+            url = Url::parse(format!("{0}{endpoint}", self.host).as_str());
         }
+        let url: Url = url.map_err(|e| TuyaError::HostUrlParse(e))?;
 
         let res = reqwest::Client::new()
             .request(method.clone(), url.clone())
@@ -55,10 +57,19 @@ impl TuyaClient {
             .json::<TuyaResponse<T>>()
             .await?;
 
-        Ok(res.result.expect("Should be succesful"))
+        if res.success {
+            Ok(res.result.expect("Should be succesful"))
+        } else {
+            Err(TuyaError::RequestError {
+                msg: res.msg.expect("contains message on failure"),
+                code: res.code.expect("contains code on failure"),
+                t: res.t,
+                tid: res.tid,
+            })
+        }
     }
 
-    fn string_to_sign(&self, method: &str, content: &str, headers: Headers, url: &str) -> String {
+    fn string_to_sign(&self, method: &str, content: &str, _headers: Headers, url: &str) -> String {
         // let headers: String = headers.into();
         let headers = "";
         let mut hasher = Sha256::new();

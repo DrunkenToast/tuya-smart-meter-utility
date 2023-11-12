@@ -16,6 +16,15 @@ impl TuyaClient {
         .await
     }
 
+    pub async fn get_device_properties(&mut self, device_id: &str) -> TuyaResult<Value> {
+        self.make_request_business(
+            Method::GET,
+            format!("/v2.0/cloud/thing/{device_id}/shadow/properties").as_str(),
+            None,
+        )
+        .await
+    }
+
     pub async fn get_device_statistics(
         &mut self,
         device_id: &str,
