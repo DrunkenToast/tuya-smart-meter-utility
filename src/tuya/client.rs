@@ -1,3 +1,5 @@
+use reqwest::Client;
+
 pub mod auth;
 pub mod device;
 pub mod request;
@@ -9,6 +11,7 @@ pub struct TuyaClient {
     access_token: Option<String>,
     refresh_token: Option<String>,
     expiration_time: Option<u128>,
+    request_client: Client,
 }
 
 impl TuyaClient {
@@ -20,6 +23,7 @@ impl TuyaClient {
             access_token: None,
             refresh_token: None,
             expiration_time: None,
+            request_client: Client::new(),
         }
     }
 }

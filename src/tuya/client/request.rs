@@ -32,6 +32,7 @@ impl TuyaClient {
         self.make_request(method, endpoint, params, false).await
     }
 
+    // TODO: Implement body content signing, currently not needed
     async fn make_request<T: de::DeserializeOwned>(
         &mut self,
         method: reqwest::Method,
@@ -43,18 +44,24 @@ impl TuyaClient {
 
         let url;
         if let Some(params) = params {
+            // Reqwest seems to internally sort the query params alphabetically.
+            // This will invalidate the signed token, so we sort it manually.
+            // (.build().url() does not work)
+            let mut params = params.to_vec();
+            params.sort_by(|a, b| a.0.cmp(b.0));
             url = Url::parse_with_params(format!("{0}{endpoint}", self.host).as_str(), params)
         } else {
             url = Url::parse(format!("{0}{endpoint}", self.host).as_str());
         }
         let url: Url = url.map_err(|e| TuyaError::HostUrlParse(e))?;
 
-        let res = reqwest::Client::new()
+        let res: TuyaResponse<T> = self
+            .request_client
             .request(method.clone(), url.clone())
-            .headers(self.create_headers(&t, &method, &url, business))
+            .headers(self.create_headers(&t, &method, &url, "", business))
             .send()
             .await?
-            .json::<TuyaResponse<T>>()
+            .json()
             .await?;
 
         if res.success {
@@ -69,8 +76,8 @@ impl TuyaClient {
         }
     }
 
+    // TODO: Implement specified header signing, currently not needed
     fn string_to_sign(&self, method: &str, content: &str, _headers: Headers, url: &str) -> String {
-        // let headers: String = headers.into();
         let headers = "";
         let mut hasher = Sha256::new();
         hasher.update(content);
@@ -80,7 +87,7 @@ impl TuyaClient {
         res
     }
 
-    fn sign(&self, t: &u128, string_to_sign: &str, nonce: &str, business: bool) -> String {
+    fn sign(&self, t: &u128, string_to_sign: &str, nonce: &u32, business: bool) -> String {
         let str: String;
         if business {
             str = format!(
@@ -110,8 +117,11 @@ impl TuyaClient {
         t: &u128,
         method: &reqwest::Method,
         url: &Url,
+        body_content: &str,
         business: bool,
     ) -> HeaderMap {
+        let nonce = rand::random::<u32>();
+
         let mut headers = HeaderMap::new();
 
         if business {
@@ -123,7 +133,7 @@ impl TuyaClient {
         headers.insert("client_id", self.client_id.parse().unwrap());
         headers.insert("sign_method", "HMAC-SHA256".parse().unwrap());
         headers.insert("t", format!("{t}").parse().unwrap());
-        headers.insert("nonce", "".parse().unwrap());
+        headers.insert("nonce", nonce.into());
 
         let url = match url.query() {
             Some(query) => {
@@ -134,9 +144,14 @@ impl TuyaClient {
 
         let signed = self.sign(
             &t,
-            self.string_to_sign(method.as_str(), "", Headers(headers.clone()), url.as_str())
-                .as_str(),
-            "",
+            self.string_to_sign(
+                method.as_str(),
+                body_content,
+                Headers(headers.clone()),
+                url.as_str(),
+            )
+            .as_str(),
+            &nonce,
             business,
         );
 

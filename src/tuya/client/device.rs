@@ -1,6 +1,7 @@
 use super::TuyaClient;
 use crate::tuya::model::{
-    device::{DeviceMonthlyStatistics, DevicesResponse},
+    date::{year_month::YearMonth, year_month_day::YearMonthDay},
+    device::{DeviceDailyStatistics, DeviceMonthlyStatistics, DeviceResponse, DevicesResponse},
     model::TuyaResult,
 };
 use reqwest::Method;
@@ -25,18 +26,46 @@ impl TuyaClient {
         .await
     }
 
-    pub async fn get_device_statistics(
+    pub async fn get_monthly_device_statistics(
         &mut self,
         device_id: &str,
+        start: &YearMonth,
+        end: &YearMonth,
     ) -> TuyaResult<DeviceMonthlyStatistics> {
+        let start: String = start.as_string();
+        let end: String = end.as_string();
+
         let res = self
             .make_request_business(
                 Method::GET,
                 format!("/v1.0/devices/{device_id}/statistics/months").as_str(),
                 Some(&[
                     ("code", "add_ele"),
-                    ("end_month", "202311"),
-                    ("start_month", "202311"),
+                    ("end_month", &end),
+                    ("start_month", &start),
+                ]),
+            )
+            .await;
+        res
+    }
+
+    pub async fn get_daily_device_statistics(
+        &mut self,
+        device_id: &str,
+        start: &YearMonthDay,
+        end: &YearMonthDay,
+    ) -> TuyaResult<DeviceDailyStatistics> {
+        let start: String = start.as_string();
+        let end: String = end.as_string();
+
+        let res = self
+            .make_request_business(
+                Method::GET,
+                format!("/v1.0/devices/{device_id}/statistics/days").as_str(),
+                Some(&[
+                    ("start_day", &start),
+                    ("end_day", &end),
+                    ("code", "add_ele"),
                 ]),
             )
             .await;

@@ -8,7 +8,7 @@ use reqwest::Method;
 impl TuyaClient {
     pub async fn get_access_token(&mut self) -> TuyaResult<()> {
         let current_time = get_time();
-        if let Some(_) = &self.access_token {
+        if self.access_token.is_some() {
             if let Some(expire_time) = self.expiration_time {
                 if expire_time > current_time {
                     // Our access_token is still valid
