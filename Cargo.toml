@@ -1,6 +1,6 @@
 [package]
 name = "tuya_util"
-author = "Peter Leconte"
+authors = ["Peter Leconte"]
 version = "0.1.0"
 edition = "2021"
 description = "Utility for Tuya smart meter devices"

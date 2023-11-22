@@ -1,7 +1,7 @@
 use super::TuyaClient;
 use crate::tuya::model::{
     date::{year_month::YearMonth, year_month_day::YearMonthDay},
-    device::{DeviceDailyStatistics, DeviceMonthlyStatistics, DeviceResponse, DevicesResponse},
+    device::{DeviceDailyStatistics, DeviceMonthlyStatistics, DevicesResponse},
     model::TuyaResult,
 };
 use reqwest::Method;

@@ -1,38 +1,44 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
-use time::{macros::format_description, Date, Month, OffsetDateTime};
+use time::{error, macros::format_description, Date, Month, OffsetDateTime};
 
 use crate::util::pretty_string::PrettyString;
 
-#[derive(Debug, Hash, Eq, Clone)]
-pub struct YearMonth {
-    pub year: i32,
-    pub month: Month,
-}
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub struct YearMonth(Date);
 
 impl YearMonth {
-    pub fn new(year: i32, month: Month) -> Self {
-        Self { year, month }
+    pub fn new(year: i32, month: Month) -> Result<Self, error::Parse> {
+        let d = Date::parse(
+            (format!("{:04}{:02}", year, month) + "01").as_str(),
+            format_description!("[year][month][day]"),
+        )?;
+        Ok(Self(d))
     }
 
     pub fn as_string(&self) -> String {
-        format!("{:04}{:02}", self.year, self.month as u8)
+        format!("{:04}{:02}", self.0.year(), self.0.month() as u8)
+    }
+
+    pub fn year(&self) -> i32 {
+        self.0.year()
+    }
+
+    pub fn month(&self) -> Month {
+        self.0.month()
     }
 }
 
 impl PrettyString for YearMonth {
     fn as_pretty_string(&self) -> String {
-        format!("{0} {1}", self.year, self.month)
+        format!("{0} {1}", self.0.year(), self.0.month())
     }
 }
 
 impl Default for YearMonth {
     fn default() -> Self {
-        let t = OffsetDateTime::now_utc();
-        Self {
-            year: t.year(),
-            month: t.month(),
-        }
+        let t = OffsetDateTime::now_utc().date();
+        Self(t)
     }
 }
 
@@ -44,37 +50,13 @@ impl Into<String> for &YearMonth {
 
 impl Into<Date> for &YearMonth {
     fn into(self) -> Date {
-        Date::parse(
-            &(self.as_string() + "01"),
-            format_description!("[year][month][day]"),
-        )
-        .expect("Self contained format")
+        self.0
     }
 }
 
 impl Display for YearMonth {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "{0}{1}", self.year, self.month as u8)
-    }
-}
-
-impl PartialEq for YearMonth {
-    fn eq(&self, other: &Self) -> bool {
-        self.year == other.year && self.month == other.month
-    }
-}
-
-impl Ord for YearMonth {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        let d1: Date = self.into();
-        let d2: Date = other.into();
-        d1.cmp(&d2)
-    }
-}
-
-impl PartialOrd for YearMonth {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
+        write!(f, "{}", self.as_string())
     }
 }
 
@@ -86,10 +68,7 @@ impl TryFrom<&str> for YearMonth {
         let t =
             Date::parse(&str, f).map_err(|_| "Failed to parse date, expects format 'yyyymm'")?;
 
-        Ok(Self {
-            year: t.year(),
-            month: t.month(),
-        })
+        Ok(Self(t))
     }
 }
 

@@ -4,8 +4,12 @@ use clap::{
     Parser, Subcommand,
 };
 
+/// Utility for Tuya smart meter devices.
+///
+/// This utility wraps the Tuya API in a CLI application and optionally
+/// exposes it as a limited API.
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about, long_about)]
 pub struct Args {
     /// Host name for Tuya endpoints
     #[arg(long, env)]
@@ -60,16 +64,16 @@ pub enum GetCommands {
 
 #[derive(Subcommand, Debug)]
 pub enum GetDevicesCommands {
-    /// List all devices
+    /// List all devices (max. 20)
     List,
-    /// Retrieve stats for all devices
+    /// Retrieve cumulative energy comsumption in kWh for all devices (max. 20)
     #[command(subcommand)]
     Stats(Frequency),
 }
 
 #[derive(Subcommand, Debug)]
 pub enum GetDeviceCommands {
-    /// Retrieve stats
+    /// Retrieve cumulative energy comsumption in kWh
     #[command(subcommand)]
     Stats(Frequency),
     /// Retrieve all device info
@@ -80,16 +84,21 @@ pub enum GetDeviceCommands {
 
 #[derive(Subcommand, Debug)]
 pub enum Frequency {
-    /// Retrieve stats
+    /// Monthly frequency
     Monthly {
+        /// Start date in the format 'yyyymm'
         #[arg(long, short, default_value_t = YearMonth::default(), value_parser = StringValueParser::new().try_map(YearMonth::try_from))]
         start: YearMonth,
+        /// End date in the format 'yyyymm'
         #[arg(long, short, default_value_t = YearMonth::default(), value_parser = StringValueParser::new().try_map(YearMonth::try_from))]
         end: YearMonth,
     },
+    /// Daily frequency
     Daily {
+        /// Start date in the format 'yyyymmdd'
         #[arg(long, short, default_value_t = YearMonthDay::first_day_current_month(), value_parser = StringValueParser::new().try_map(YearMonthDay::try_from))]
         start: YearMonthDay,
+        /// End date in the format 'yyyymmdd'
         #[arg(long, short, default_value_t = YearMonthDay::last_day_current_month(), value_parser = StringValueParser::new().try_map(YearMonthDay::try_from))]
         end: YearMonthDay,
     },
